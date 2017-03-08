@@ -5,6 +5,8 @@
 
 extern crate futures;
 extern crate hyper;
+#[cfg(feature = "tls")]
+extern crate hyper_tls;
 extern crate ruma_client_api;
 extern crate ruma_identifiers;
 extern crate serde;
@@ -16,8 +18,14 @@ extern crate url;
 use std::borrow::Cow;
 use std::fmt::Debug;
 
-use hyper::client::{Client as HyperClient, HttpConnector, Request as HyperRequest};
+use hyper::client::{Client as HyperClient, Request as HyperRequest};
 use hyper::Method as HyperMethod;
+
+#[cfg(feature = "tls")]
+use hyper_tls::HttpsConnector;
+#[cfg(not(feature = "tls"))]
+use hyper::client::HttpConnector;
+
 use ruma_client_api::{Endpoint, Method};
 use ruma_client_api::unversioned::get_supported_versions;
 use tokio_core::reactor::Handle;
@@ -35,6 +43,9 @@ mod session;
 #[derive(Debug)]
 pub struct Client {
     homeserver_url: Url,
+    #[cfg(feature = "tls")]
+    hyper: HyperClient<HttpsConnector>,
+    #[cfg(not(feature = "tls"))]
     hyper: HyperClient<HttpConnector>,
     session: Option<Session>,
 }
@@ -61,11 +72,22 @@ impl Client {
     ///
     /// Returns an error if the given homeserver URL cannot be parsed as a URL.
     pub fn new<U>(handle: &Handle, homeserver_url: U) -> Result<Self, Error> where U: TryIntoUrl {
-        Ok(Client {
-            homeserver_url: homeserver_url.try_into()?,
-            hyper: HyperClient::configure().keep_alive(true).build(handle),
-            session: None,
-        })
+        #[cfg(feature = "tls")]
+        {
+            Ok(Client {
+                homeserver_url: homeserver_url.try_into()?,
+                hyper: HyperClient::configure().connector(HttpsConnector::new(4, handle)).keep_alive(true).build(handle),
+                session: None,
+            })
+        }
+        #[cfg(not(feature = "tls"))]
+        {
+            Ok(Client {
+                homeserver_url: homeserver_url.try_into()?,
+                hyper: HyperClient::configure().keep_alive(true).build(handle),
+                session: None,
+            })
+        }
     }
 
     /// Get the versions of the Matrix client-server specification supported by the homeserver.

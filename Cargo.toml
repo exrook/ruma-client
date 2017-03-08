@@ -10,6 +10,8 @@ readme = "README.md"
 repository = "https://github.com/ruma/ruma-client"
 version = "0.1.0"
 
+[features]
+tls = ["hyper-tls"]
 [dependencies]
 futures = "0.1.7"
 ruma-identifiers = "0.6.0"
@@ -21,6 +23,10 @@ url = "1.2.4"
 
 [dependencies.hyper]
 git = "https://github.com/hyperium/hyper"
+
+[dependencies.hyper-tls]
+optional = true
+git = "https://github.com/hyperium/hyper-tls"
 
 [dependencies.ruma-client-api]
 git = "https://github.com/ruma/ruma-client-api"
